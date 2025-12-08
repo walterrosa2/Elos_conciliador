@@ -3,6 +3,7 @@ from conciliador import processar_conciliacao, processar_em_chunks
 from utils import gerar_nome_conciliacao, salvar_excel_bytes, enviar_email_bytes
 import pandas as pd
 import json
+import os
 
 # === Carrega usuários de JSON ===
 def carregar_usuarios(path="usuarios.json"):
@@ -81,13 +82,13 @@ if arquivo:
             else:
                 buf, fname = salvar_excel_bytes(st.session_state.resultado_json, nome_conciliacao)
 
-                # Carrega configurações
+                # Carrega configurações (suporta st.secrets OU variáveis de ambiente)
                 cfg = st.secrets.get("email", {})
-                host = cfg.get("host", "smtp.gmail.com")
-                port = int(cfg.get("port", 587))
-                remetente = cfg.get("from", "walterrosa2@gmail.com")
-                password = cfg.get("password", "rgpwxnusytalgkun")
-                destinatario = st.session_state.get("email_destinatario") or cfg.get("recipient", "ia@enthusconsulting.com.br")
+                host = cfg.get("host") or os.getenv("EMAIL_HOST", "smtp.gmail.com")
+                port = int(cfg.get("port") or os.getenv("EMAIL_PORT", "587"))
+                remetente = cfg.get("from") or os.getenv("EMAIL_FROM", "walterrosa2@gmail.com")
+                password = cfg.get("password") or os.getenv("EMAIL_PASSWORD")
+                destinatario = st.session_state.get("email_destinatario") or cfg.get("recipient") or os.getenv("EMAIL_RECIPIENT", "ia@enthusconsulting.com.br")
 
                 try:
                     enviar_email_bytes(
