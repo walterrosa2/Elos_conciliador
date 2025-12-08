@@ -1,0 +1,24 @@
+
+
+Com base na versão atual, precisamos promover algumas melhorias segue os requisitos <requisitos> e objetivo <objetivo>.
+
+<objetivo>
+
+</objetivo>
+
+<requisitos>
+1 - A aplicação ao final da execução, ou seja, após geração da planilha final, vai enviar por email conforme configurações de email <email>. Assim, não será necessário salvar os arquivos excell resultado da execução pois já terá sido enviado por email. De forma que o deploy no streamlit não fique comprometido por não ser possível salvar os arquivos excell.
+2 - Não será necessário salvar as evidencias de envio/retorno da openai, faça uma verificação se a versão atual ainda registra esses arquivos de pacote de envio e retorno para auditoria
+3 - O front end não precisará mais do botão de download do arquivo e também da parte de "Histórico de conciliações" pois será enviado automaticamente por email ao final da execução
+4 - Precisamos deixar visual o acompanhamento da execução no front end, ou seja, termos visualmente uma barra de evolução dos dados enviados e retornados pela openai, em percentuais de completude, assim como a etapa de geração da planilha final e também de envio por email, assim o usuário saberá exatamente o que esta acontecendo.
+5 - precisamos também criar uma tela inicial de login do usuário final, podemos salvar as configurações de usuário e senha em json para não precisar criar tela de administração de acesso
+</requisitos>
+
+<email>
+{
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "from": "walterrosa2@gmail.com",
+  "password": "rgpwxnusytalgkun"
+}
+</email>
