@@ -96,6 +96,17 @@ if arquivo:
                 remetente = cfg.get("from") or os.getenv("EMAIL_FROM", "walterrosa2@gmail.com")
                 password = cfg.get("password") or os.getenv("EMAIL_PASSWORD")
                 destinatario = st.session_state.get("email_destinatario") or cfg.get("recipient") or os.getenv("EMAIL_RECIPIENT", "ia@enthusconsulting.com.br")
+                
+                # 🔍 DEBUG: Mostrar configurações (sem expor senha completa)
+                st.info(f"""
+                **🔧 Configurações de Email Detectadas:**
+                - Host: `{host}`
+                - Port: `{port}`
+                - From: `{remetente}`
+                - Password: `{'*' * (len(password)-4) + password[-4:] if password and len(password) > 4 else 'NÃO CONFIGURADA'}`
+                - Recipient: `{destinatario}`
+                - Fonte: `{'st.secrets' if cfg else 'env vars/padrão'}`
+                """)
 
                 try:
                     enviar_email_bytes(
