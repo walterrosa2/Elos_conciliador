@@ -83,7 +83,14 @@ if arquivo:
                 buf, fname = salvar_excel_bytes(st.session_state.resultado_json, nome_conciliacao)
 
                 # Carrega configurações (suporta st.secrets OU variáveis de ambiente)
-                cfg = st.secrets.get("email", {})
+                try:
+                    # Tenta ler do st.secrets (Streamlit Cloud)
+                    cfg = st.secrets.get("email", {})
+                except Exception:
+                    # Se não existir secrets.toml, usa dict vazio
+                    cfg = {}
+                
+                # Prioriza st.secrets, depois env vars, depois padrões
                 host = cfg.get("host") or os.getenv("EMAIL_HOST", "smtp.gmail.com")
                 port = int(cfg.get("port") or os.getenv("EMAIL_PORT", "587"))
                 remetente = cfg.get("from") or os.getenv("EMAIL_FROM", "walterrosa2@gmail.com")
