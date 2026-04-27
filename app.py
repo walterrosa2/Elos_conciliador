@@ -50,64 +50,55 @@ if arquivo:
     # Leitura do Excel
     df_excel = pd.read_excel(arquivo, header=2)
 
-    # Etapa 1
-    st.write("### Etapa 1: Preparar prompt")
-    if st.button("👉 Continuar para Etapa 2 (Enviar à OpenAI)"):
+    # === Configuração de Entrega ===
+    st.write("---")
+    st.write("### 📧 Configuração de Entrega")
+    email_user = st.text_input(
+        "Informe o e-mail destinatário para envio do resultado:",
+        placeholder="exemplo@email.com",
+        help="O resultado será enviado automaticamente para este e-mail assim que o processamento terminar."
+    )
+
+    if st.button("🚀 Iniciar Conciliação e Enviar por E-mail"):
+        if not email_user:
+            st.error("⚠️ O preenchimento do e-mail é obrigatório para iniciar a conciliação.")
+            st.stop()
+        
+        # --- ETAPA 1: Processamento OpenAI ---
         progresso = st.progress(0)
 
         def _cb(lote_atual: int, total_lotes: int):
             frac = lote_atual / max(total_lotes, 1)
             progresso.progress(min(max(frac, 0.0), 1.0))
 
-        with st.spinner("🔄 Processando conciliação via OpenAI..."):
-            st.session_state.resultado_json = processar_em_chunks(
+        with st.spinner("🔄 Processando conciliação via OpenAI... Isso pode levar até 1 hora dependendo do volume."):
+            resultado_json = processar_em_chunks(
                 df_excel,
                 nome_conciliacao,
                 on_progress=_cb
             )
-        progresso.progress(1)
+        progresso.progress(1.0)
 
-    # Etapa 2 + 3
-    if st.session_state.resultado_json is not None:
-        st.write("### Etapa 2: Processar resposta")
-
-        # Campo de email no front
-        email_user = st.text_input("📧 Informe o e-mail destinatário para envio do resultado:")
-        if email_user:
-            st.session_state["email_destinatario"] = email_user
-
-        if st.button("👉 Continuar para Etapa 3 (Gerar Excel e Enviar por Email)"):
-            if "erro" in st.session_state.resultado_json:
-                st.error(f"❌ Erro durante o processamento: {st.session_state.resultado_json['erro']}")
-            else:
-                buf, fname = salvar_excel_bytes(st.session_state.resultado_json, nome_conciliacao)
+        # --- ETAPA 2: Verificação e Envio ---
+        if "erro" in resultado_json:
+            st.error(f"❌ Erro durante o processamento: {resultado_json['erro']}")
+        else:
+            with st.spinner("📧 Gerando planilha e enviando por e-mail..."):
+                buf, fname = salvar_excel_bytes(resultado_json, nome_conciliacao)
 
                 # Carrega configurações (suporta st.secrets OU variáveis de ambiente)
                 try:
-                    # Tenta ler do st.secrets (Streamlit Cloud)
                     cfg = st.secrets.get("email", {})
                 except Exception:
-                    # Se não existir secrets.toml, usa dict vazio
                     cfg = {}
                 
-                # Prioriza st.secrets, depois env vars, depois padrões
+                # Priorização: st.secrets -> env vars -> padrão
                 host = cfg.get("host") or os.getenv("EMAIL_HOST", "smtp.gmail.com")
                 port = int(cfg.get("port") or os.getenv("EMAIL_PORT", "587"))
                 remetente = cfg.get("from") or os.getenv("EMAIL_FROM", "walterrosa2@gmail.com")
                 password = cfg.get("password") or os.getenv("EMAIL_PASSWORD")
-                destinatario = st.session_state.get("email_destinatario") or cfg.get("recipient") or os.getenv("EMAIL_RECIPIENT", "ia@enthusconsulting.com.br")
+                destinatario = email_user or cfg.get("recipient") or os.getenv("EMAIL_RECIPIENT", "ia@enthusconsulting.com.br")
                 
-                # 🔍 DEBUG: Mostrar configurações (sem expor senha completa)
-                st.info(f"""
-                **🔧 Configurações de Email Detectadas:**
-                - Host: `{host}`
-                - Port: `{port}`
-                - From: `{remetente}`
-                - Password: `{'*' * (len(password)-4) + password[-4:] if password and len(password) > 4 else 'NÃO CONFIGURADA'}`
-                - Recipient: `{destinatario}`
-                - Fonte: `{'st.secrets' if cfg else 'env vars/padrão'}`
-                """)
-
                 try:
                     enviar_email_bytes(
                         arquivo_nome=fname,
@@ -117,10 +108,13 @@ if arquivo:
                         port=port,
                         remetente=remetente,
                         password=password,
-                        subject="Resultado de Conciliação",
-                        body="Olá! Segue em anexo o resultado da conciliação."
+                        subject=f"Resultado de Conciliação - {nome_conciliacao}",
+                        body=f"Olá!\n\nA conciliação do arquivo '{arquivo.name}' foi concluída com sucesso.\n\nArquivo: {fname}\nData/Hora: {nome_conciliacao.split('_')[-2:]}\n\nAtt,\nEquipe ELOS"
                     )
                     st.success("✅ Conciliação finalizada com sucesso!")
-                    st.info(f"📧 Arquivo enviado com sucesso para {destinatario}!")
+                    st.info(f"📧 O arquivo foi enviado para: **{destinatario}**")
+                    st.balloons()
                 except Exception as e:
                     st.error(f"❌ Falha ao enviar e-mail: {e}")
+                    st.warning("O processamento terminou, mas o e-mail não pôde ser enviado. Verifique as configurações de SMTP.")
+
